@@ -19,6 +19,15 @@ def get_price(symbol):
                 return float(data['price']) if 'price' in data else None
             except:
                 return None
+def format_price_custom(p):
+    s = f"{p:.10f}".lstrip("0")  # Remove leading 0 for easy parsing
+    match = re.match(r'^\.0*([0-9]{1,7})', s)
+    if match:
+        digits = match.group(1)[:4 + (len(match.group(1)) - len(match.group(1).lstrip("0")))]
+        return "0." + "0" * (len(s.split('.')[1]) - len(digits)) + digits
+    else:
+        # For numbers like 0.123456, keep only 4 decimal places
+        return f"{p:.4f}"
 
 
 # Handle Telegram messages
@@ -65,7 +74,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if coin_id.lower() in ["btc", "eth"]:
                     format_price = lambda p: f"{int(p)}"
                 else:
-                    format_price = lambda p: f"{p:.4f}"
+                    format_price = format_price_custom if not use_whole_numbers else (lambda p: f"{int(p)}")
                 response_message = (f"Spot + Future Long\n"
                                     f"{symbol_pair}\n"
                                     f"Entry: {format_price(price)}\n"
