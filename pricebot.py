@@ -62,7 +62,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 leverage = "2x-5x"
                 symbol_pair = f"{coin_id.upper()}/USDT"
                 # Format the message with entry, stoploss, TP levels, and leverage
-                if coin_id.lower() == "btc":
+                if coin_id.lower() in ["btc", "eth"]:
                     format_price = lambda p: f"{int(p)}"
                 else:
                     format_price = lambda p: f"{p:.4f}"
