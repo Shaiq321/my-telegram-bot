@@ -85,7 +85,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 stoploss_price = price * 0.70
                 use_whole_numbers = False 
 
-            leverage = "2x-5x"
+            leverage = "20x"
             symbol_pair = f"{coin_id.upper()}/USDT"
 
             # ✅ Format prices
@@ -105,7 +105,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"TP5: {format_price(tp5_price)}\n"
                 f"TP6: {format_price(tp6_price)}\n"
                 f"TP7: {format_price(tp7_price)}\n"
-                f"Lev: {leverage}\n"
+                f"Leverage: {leverage}\n"
                 f"Stoploss: {format_price(stoploss_price)}\n\n"
                 f"For Premium contact @shsAdmin"
             )
