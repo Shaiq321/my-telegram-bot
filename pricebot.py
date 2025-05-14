@@ -95,18 +95,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 format_price = format_price_custom if not use_whole_numbers else (lambda p: f"{int(p)}")
 
             response_message = (
-                f"Spot + Future Long\n"
-                f"{symbol_pair}\n"
-                f"Entry: {format_price(price)}\n"
+                f"Spot + Future Long\n\n"
+                f"{symbol_pair}\n\n"
+                f"Entry: {format_price(price)}\n\n"
                 f"TP1: {format_price(tp1_price)}\n"
                 f"TP2: {format_price(tp2_price)}\n"
                 f"TP3: {format_price(tp3_price)}\n"
                 f"TP4: {format_price(tp4_price)}\n"
                 f"TP5: {format_price(tp5_price)}\n"
                 f"TP6: {format_price(tp6_price)}\n"
-                f"TP7: {format_price(tp7_price)}\n"
-                f"Leverage: {leverage}\n"
+                f"TP7: {format_price(tp7_price)}\n\n"
+                
                 f"Stoploss: {format_price(stoploss_price)}\n\n"
+                f"Leverage : {leverage} [isolated]\n"
                 f"For Premium contact @shsAdmin"
             )
 
