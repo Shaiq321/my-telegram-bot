@@ -10,14 +10,28 @@ TOKEN = os.getenv("TOKEN")
 
 # ✅ Fetch price from Binance Futures
 def get_price(symbol):
+    # Try fetching the price for the standard symbol
     binance_symbol = symbol.upper() + "USDT"
     url = f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={binance_symbol}"
     try:
         response = requests.get(url)
         data = response.json()
-        return float(data['price']) if 'price' in data else None
+        if 'price' in data:
+            return float(data['price'])
     except:
-        return None
+        pass  # If the standard symbol doesn't work, try the alternative
+
+    # If not found, try fetching the price for the '1000' prefixed symbol (e.g., 1000PEPE)
+    alternative_symbol = "1000" + symbol.upper() + "USDT"
+    try:
+        response = requests.get(f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={alternative_symbol}")
+        data = response.json()
+        if 'price' in data:
+            return float(data['price'])
+    except:
+        return None  # If neither the standard nor alternative symbol works
+
+
 
 
 # ✅ Format price with up to 5 significant decimal digits
