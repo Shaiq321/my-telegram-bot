@@ -94,16 +94,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text=f"⚠️ Could not fetch price for '{coin_id}'. Please check CoinGecko ID."
+                text=f"⚠️ Could not fetch price for '{coin_id}'. Please check binance ID."
             )
 
 
-
+    # Start the Flask keep-alive server
+app = ApplicationBuilder().token(TOKEN).build()
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 keep_alive()
 # Direct entry point (no asyncio.run)
 if __name__ == '__main__':
-    # Start the Flask keep-alive server
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     print("Bot is running...")
     app.run_polling()  # ✅ Let it manage its own event loop in
