@@ -55,11 +55,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     tp7_price = price * 2.00  # 100% above current price
                     # Calculate stoploss (40% below current market price)
                     stoploss_price = price * 0.70  # 30% below current price
-                   
-                        if coin_id.lower() == "eth":
-                             use_whole_numbers = True
-                        else: 
-                             use_whole_numbers = False
+                    use_whole_numbers = False
                     
 
                 # Define leverage options
