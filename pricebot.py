@@ -19,15 +19,22 @@ def get_price(symbol):
                 return float(data['price']) if 'price' in data else None
             except:
                 return None
-def format_price_custom(p):
-    s = f"{p:.10f}".lstrip("0")  # Remove leading 0 for easy parsing
-    match = re.match(r'^\.0*([0-9]{1,7})', s)
-    if match:
-        digits = match.group(1)[:4 + (len(match.group(1)) - len(match.group(1).lstrip("0")))]
-        return "0." + "0" * (len(s.split('.')[1]) - len(digits)) + digits
-    else:
-        # For numbers like 0.123456, keep only 4 decimal places
-        return f"{p:.4f}"
+                        
+def format_price_custom(price: float) -> str:
+    price_str = f"{price:.10f}"  # Convert to string with fixed-point notation
+    if '.' in price_str:
+        integer_part, decimal_part = price_str.split('.')
+        sig_digits = ''
+        count = 0
+        for digit in decimal_part:
+            sig_digits += digit
+            if digit != '0':
+                count += 1
+            if count == 5:
+                break
+        return f"{integer_part}.{sig_digits}".rstrip('0').rstrip('.')
+    return price_str
+
 
 
 # Handle Telegram messages
