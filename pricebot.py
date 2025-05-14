@@ -75,15 +75,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 use_whole_numbers = True
             else:
                 # Default TP levels
-                tp1_price = price * 1.05
-                tp2_price = price * 1.10
-                tp3_price = price * 1.20
-                tp4_price = price * 1.40
-                tp5_price = price * 1.60
-                tp6_price = price * 1.80
-                tp7_price = price * 2.00
+                tp1_price = price * 1.045
+                tp2_price = price * 1.095
+                tp3_price = price * 1.195
+                tp4_price = price * 1.395
+                tp5_price = price * 1.595
+                tp6_price = price * 1.795
+                tp7_price = price * 1.995
                 stoploss_price = price * 0.70
-                use_whole_numbers = False
+                use_whole_numbers = False 
 
             leverage = "2x-5x"
             symbol_pair = f"{coin_id.upper()}/USDT"
