@@ -107,8 +107,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"TP7: {format_price(tp7_price)}\n\n"
                 
                 f"Stoploss: {format_price(stoploss_price)}\n\n"
-                f"Leverage : {leverage} [isolated]\n"
-                f"For Premium contact @shsAdmin"
+                f"Leverage : {leverage} [isolated]\n\n"
+                f"@shsAdmin"
             )
 
             # Send to user
