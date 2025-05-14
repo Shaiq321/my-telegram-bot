@@ -4,7 +4,9 @@ from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filte
 import re
 import requests
 
-TOKEN = "YOUR_BOT_TOKEN"
+import os
+TOKEN = os.getenv("TOKEN")
+
 
 def get_price(symbol):
     binance_symbol = symbol.upper() + "USDT"
