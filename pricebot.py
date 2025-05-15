@@ -94,7 +94,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 format_price = format_price_custom if not use_whole_numbers else (lambda p: f"{int(p)}")
 
             response_message = (
-                f"Spot + Future {'Short' if is_short else 'Long'}\n\n"
+                f"Future {'Short' if is_short else 'Long + Spot'}\n\n"
                 f"{symbol_pair}\n\n"
                 f"Entry: {format_price(price)}\n\n" +
                 "\n".join([f"TP{i+1}: {format_price(tp)}" for i, tp in enumerate(tp_prices)]) + "\n\n" +
