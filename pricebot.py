@@ -74,6 +74,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 tp_factors = [0.98, 0.96, 0.92, 0.90, 0.85, 0.80, 0.70] if is_short else [1.02, 1.04, 1.08, 1.10, 1.15, 1.20, 1.30]
                 stoploss_price = price * 1.10 if is_short else price * 0.90
                 use_whole_numbers = True
+            elif coin_id.lower() == "eth":
+                tp_factors = [0.955, 0.905, 0.855, 0.805, 0.755, 0.705, 0.655] if is_short else [1.045, 1.095, 1.145, 1.195, 1.245, 1.295, 1.395]
+                stoploss_price = price * 1.15 if is_short else price * 0.85
+                use_whole_numbers = True
             else:
                 tp_factors = [
                     0.955, 0.905, 0.805, 0.605, 0.405, 0.205, 0.005
