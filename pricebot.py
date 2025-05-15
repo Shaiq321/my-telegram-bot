@@ -52,6 +52,70 @@ def format_price_custom(price: float) -> str:
 
 
 # ✅ Handle Telegram messages
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+
+    text = update.message.text.strip().lower()
+
+    # Match both long and short signals
+    long_match = re.search(r'#([a-z0-9\-]+)\s+buy_at_cmp', text)
+    short_match = re.search(r'#([a-z0-9\-]+)\s+short_at_cmp', text)
+
+    if long_match or short_match:
+        coin_id = (long_match or short_match).group(1)
+        price = get_price(coin_id)
+
+        if price:
+            is_short = bool(short_match)
+
+            if coin_id.lower() == "btc":
+                tp_factors = [0.98, 0.96, 0.92, 0.90, 0.85, 0.80, 0.70] if is_short else [1.02, 1.04, 1.08, 1.10, 1.15, 1.20, 1.30]
+                stoploss_price = price * 1.10 if is_short else price * 0.90
+                use_whole_numbers = True
+            else:
+                tp_factors = [
+                    0.955, 0.905, 0.805, 0.605, 0.405, 0.205, 0.005
+                ] if is_short else [
+                    1.045, 1.095, 1.195, 1.395, 1.595, 1.795, 1.995
+                ]
+                stoploss_price = price * 1.30 if is_short else price * 0.70
+                use_whole_numbers = False
+
+            tp_prices = [price * f for f in tp_factors]
+            symbol_pair = f"{coin_id.upper()}/USDT"
+            leverage = "20x"
+
+            # Format price
+            if coin_id.lower() in ["btc", "eth"]:
+                format_price = lambda p: f"{int(p)}"
+            else:
+                format_price = format_price_custom if not use_whole_numbers else (lambda p: f"{int(p)}")
+
+            response_message = (
+                f"Spot + Future {'Short' if is_short else 'Long'}\n\n"
+                f"{symbol_pair}\n\n"
+                f"Entry: {format_price(price)}\n\n" +
+                "\n".join([f"TP{i+1}: {format_price(tp)}" for i, tp in enumerate(tp_prices)]) + "\n\n" +
+                f"Stoploss: {format_price(stoploss_price)}\n\n"
+                f"Leverage : {leverage} [isolated]\n\n"
+                f"@shsAdmin"
+            )
+
+            # Send to user
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=response_message)
+
+            # Send to channel
+            await context.bot.send_message(chat_id='-1001541449446', text=response_message)
+
+        else:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"⚠️ Could not fetch price for '{coin_id}'. Please check Binance Futures symbol."
+            )
+
+'''
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
@@ -122,7 +186,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chat_id=update.effective_chat.id,
                 text=f"⚠️ Could not fetch price for '{coin_id}'. Please check Binance Futures symbol."
             )
-
+'''
 
 # ✅ Start bot
 app = ApplicationBuilder().token(TOKEN).build()
