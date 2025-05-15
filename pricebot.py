@@ -71,7 +71,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             is_short = bool(short_match)
 
             if coin_id.lower() == "btc":
-                tp_factors = [0.98, 0.96, 0.92, 0.90, 0.85, 0.80, 0.70] if is_short else [1.02, 1.04, 1.08, 1.10, 1.15, 1.20, 1.30]
+                tp_factors = [0.982, 0.962, 0.922, 0.902, 0.852, 0.802, 0.702] if is_short else [1.018, 1.038, 1.078, 1.098, 1.148, 1.198, 1.298]
                 stoploss_price = price * 1.10 if is_short else price * 0.90
                 use_whole_numbers = True
             elif coin_id.lower() == "eth":
