@@ -24,13 +24,13 @@ def get_price(symbol):
         response = requests.get(url)
         data = response.json()
         if 'price' in data:
-            return float(data['price'])
+            return float(data['price']), binance_symbol
 
         alternative_symbol = "1000" + symbol.upper() + "USDT"
         response = requests.get(f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={alternative_symbol}")
         data = response.json()
         if 'price' in data:
-            return float(data['price'])
+            return float(data['price']), alternative_symbol
     except Exception as e:
         logger.error(f"Error fetching price for {symbol}: {e}")
         return None
@@ -77,7 +77,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if long_match or short_match:
             coin_id = (long_match or short_match).group(1)
-            price = get_price(coin_id)
+            price, actual_symbol = get_price(coin_id)
+
 
             if price:
                 is_short = bool(short_match)
@@ -96,7 +97,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     use_whole_numbers = False
 
                 tp_prices = [price * f for f in tp_factors]
-                symbol_pair = f"{coin_id.upper()}/USDT"
+                symbol_pair = f"{actual_symbol.replace('USDT', '')}/USDT"
+
                 leverage = "20x"
 
                 format_price = (
