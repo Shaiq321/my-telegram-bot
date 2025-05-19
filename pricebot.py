@@ -113,7 +113,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"Entry: {format_price(price)}\n\n" +
                     "\n".join([f"TP{i+1}: {format_price(tp)}" for i, tp in enumerate(tp_prices)]) + "\n\n" +
                     f"Stoploss: {format_price(stoploss_price)}\n\n"
-                    f"Leverage : {leverage} [isolated]\n\n"
+                    f"Leverage : {leverage} [cross]\n\n"
                     f"@shsAdmin"
                 )
 
