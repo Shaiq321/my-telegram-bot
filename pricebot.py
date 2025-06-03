@@ -78,13 +78,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
        # short_match = re.search(r'#([a-z0-9\-]+)\s+short_at_cmp', text)
         short_match = re.search(r'(?:#([a-z0-9\-]+)\s+short_at_cmp|short_at_cmp\s+#([a-z0-9\-]+))', text)
 
-        if long_match or short_match:
+       # if long_match or short_match:
           #  coin_id = (long_match or short_match).group(1)
-             coin_id = (long_match or short_match).group(1) or (long_match or short_match).group(2)
-
-
+        match = long_match or short_match
+        if match:
+            coin_id = match.group(1) or match.group(2)
             price, actual_symbol = get_price(coin_id)
-
 
             if price:
                 is_short = bool(short_match)
