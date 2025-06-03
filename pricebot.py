@@ -71,15 +71,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             return
 
-        # === Buy / Short signal handler ===
+        # === Buy / Short signal 
 
-        # Long (Buy) Match
-         long_match = re.search(r'(?:#([a-z0-9\-]+)[\s\S]{0,20}?buy_at_cmp|buy_at_cmp[\s\S]{0,20}?#([a-z0-9\-]+))',text)
-
-        # Short Match
-          short_match = re.search(r'(?:#([a-z0-9\-]+)[\s\S]{0,20}?short_at_cmp|short_at_cmp[\s\S]{0,20}?#([a-z0-9\-]+))',text)
-
-
+        long_match = re.search(r'(?:#([a-z0-9\-]+)\s+buy_at_cmp|buy_at_cmp\s+#([a-z0-9\-]+))', text)
+        short_match = re.search(r'(?:#([a-z0-9\-]+)\s+short_at_cmp|short_at_cmp\s+#([a-z0-9\-]+))', text)
         
         match = long_match or short_match
         if match:
