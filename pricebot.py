@@ -65,10 +65,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             coin_matches = re.findall(r'#([a-z0-9\-]+)', update.message.text, re.IGNORECASE)
             if coin_matches:
                 for coin in coin_matches:
-                    await context.bot.send_message(
-                        chat_id=update.effective_chat.id,
-                        text=f"Cancel {coin.upper()}/USDT"
-                    )
+                 message = f"Cancel {coin.upper()}/USDT"
+                 await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+                 await context.bot.send_message(chat_id='-1001541449446', text=message)
+
             return
 
         # === Buy / Short signal handler ===
