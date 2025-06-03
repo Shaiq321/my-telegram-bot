@@ -92,7 +92,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     stoploss_price = price * 1.15 if is_short else price * 0.85
                     use_whole_numbers = True
                 else:
-                    tp_factors = [0.955, 0.905, 0.805, 0.605, 0.405, 0.205, 0.005] if is_short else [1.045, 1.095, 1.195, 1.395, 1.595, 1.795, 1.995]
+                    tp_factors = [0.955, 0.905, 0.805, 0.605, 0.405, 0.205, 0.105] if is_short else [1.045, 1.095, 1.195, 1.395, 1.595, 1.795, 1.995]
                     stoploss_price = price * 1.30 if is_short else price * 0.70
                     use_whole_numbers = False
 
