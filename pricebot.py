@@ -77,9 +77,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         match = long_match or short_match
         if match:
-            coin_id = match.group(1) or match.group(2)
-            price, actual_symbol = get_price(coin_id)
+          coin_id = match.group(1) or match.group(2)
+          price_data = get_price(coin_id)
+         if not price_data or price_data[0] is None:
+            await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"⚠️ Could not fetch price for '{coin_id.upper()}'. Please check Binance Futures symbol."
+             )
+             return
 
+             price, actual_symbol = price_data
+        
+    
             if price:
                 is_short = bool(short_match)
 
