@@ -32,7 +32,7 @@ def get_price(symbol):
             return float(data['price']), alternative_symbol
     except Exception as e:
         logger.error(f"Error fetching price for {symbol}: {e}")
-        return None
+        return None, None
 
 # ✅ Format price with up to 5 significant decimal digits
 def format_price_custom(price: float) -> str:
