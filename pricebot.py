@@ -62,20 +62,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         text = update.message.text.strip().lower()
 
-        # === Unified Cancel Logic ===
-        cancel_trigger = re.search(
-            r'\b(is|are)\s+invalidated\b|\binvalid\b|\bcancelled\b|\bnot\s+valid\b|\bexit\b',
-            text,
-            re.IGNORECASE
+        # === Combined Cancel Logic ===
+        cancel_keywords = (
+            r'\b(is|are)\s+invalidated\b|\binvalid\b|\bcancelled\b|\bnot\s+valid\b|\bexit\b|'
+            r'\bclose\b|\bclosed\b|\bclosing\b|\bstopped out\b|\bstop loss\b|\bcut loss\b|\bhit sl\b|\bsl\b'
         )
-        if cancel_trigger:
-            coins = re.findall(r'#([a-z0-9\-]+)', text, re.IGNORECASE)
-            if coins:
-                coins_upper = sorted({c.upper() for c in coins})
-                message = "Cancel: " + ", ".join(f"{c}/USDT" for c in coins_upper)
+        coin_matches = re.findall(r'#([a-z0-9\-]+)', text, re.IGNORECASE)
+
+        if re.search(cancel_keywords, text, re.IGNORECASE) and coin_matches:
+            for coin in sorted(set(coin_matches)):
+                coin_upper = coin.upper()
+                message = f"Cancel {coin_upper}/USDT"
                 await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
                 await context.bot.send_message(chat_id='-1001541449446', text=message)
-                return
+            return
 
         # === Extract Buy/Short commands ===
         long_matches = re.findall(r'#([a-z0-9\-]+)\s+buy_at_cmp|buy_at_cmp\s+#([a-z0-9\-]+)', text)
