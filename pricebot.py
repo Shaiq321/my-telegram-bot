@@ -3,12 +3,13 @@ import requests
 import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-
 from keep_alive import keep_alive
 import os
+
 TOKEN = os.getenv("TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))  # Set your admin Telegram ID in the environment
-# ✅ Set up logging
+ADMIN_ID = int(os.getenv("ADMIN_ID"))  # Set your admin Telegram ID in environment
+
+# ✅ Logging setup
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -25,16 +26,19 @@ def get_price(symbol):
         if 'price' in data:
             return float(data['price']), binance_symbol
 
+        # Try "1000" prefixed version
         alternative_symbol = "1000" + symbol.upper() + "USDT"
-        response = requests.get(f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={alternative_symbol}")
+        url = f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={alternative_symbol}"
+        response = requests.get(url)
         data = response.json()
         if 'price' in data:
             return float(data['price']), alternative_symbol
+
     except Exception as e:
         logger.error(f"Error fetching price for {symbol}: {e}")
-        return None, None
+    return None, None
 
-# ✅ Format price with up to 5 significant decimal digits
+# ✅ Format price with 5 significant decimal digits
 def format_price_custom(price: float) -> str:
     price_str = f"{price:.10f}"
     if '.' in price_str:
@@ -50,7 +54,7 @@ def format_price_custom(price: float) -> str:
         return f"{integer_part}.{sig_digits}".rstrip('0').rstrip('.')
     return price_str
 
-# ✅ Handle Telegram messages
+# ✅ Main handler
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         if not update.message or not update.message.text:
@@ -58,31 +62,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         text = update.message.text.strip().lower()
 
-        # === Cancellation handler ===
+        # === Cancellation ===
         cancel_keywords = r'\b(close|closed|closing|stopped out|stop loss|cut loss|hit sl|sl)\b'
         if re.search(cancel_keywords, text, re.IGNORECASE):
             coin_matches = re.findall(r'#([a-z0-9\-]+)', update.message.text, re.IGNORECASE)
             if coin_matches:
                 for coin in coin_matches:
-                 message = f"Cancel {coin.upper()}/USDT"
-                 await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
-                 await context.bot.send_message(chat_id='-1001541449446', text=message)
-
+                    message = f"Cancel {coin.upper()}/USDT"
+                    await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+                    await context.bot.send_message(chat_id='-1001541449446', text=message)
             return
 
-        # === Buy / Short signal 
+        # === Extract Buy/Short commands ===
+        long_matches = re.findall(r'#([a-z0-9\-]+)\s+buy_at_cmp|buy_at_cmp\s+#([a-z0-9\-]+)', text)
+        short_matches = re.findall(r'#([a-z0-9\-]+)\s+short_at_cmp|short_at_cmp\s+#([a-z0-9\-]+)', text)
 
-        long_match = re.search(r'(?:#([a-z0-9\-]+)\s+buy_at_cmp|buy_at_cmp\s+#([a-z0-9\-]+))', text)
-        short_match = re.search(r'(?:#([a-z0-9\-]+)\s+short_at_cmp|short_at_cmp\s+#([a-z0-9\-]+))', text)
-        
-        match = long_match or short_match
-        if match:
-            coin_id = match.group(1) or match.group(2)
+        # Normalize matches: (coin, is_short)
+        signals = [(m[0] or m[1], False) for m in long_matches] + [(m[0] or m[1], True) for m in short_matches]
+
+        for coin_id, is_short in signals:
             price, actual_symbol = get_price(coin_id)
-
             if price:
-                is_short = bool(short_match)
-
+                # === TP/SL logic ===
                 if coin_id.lower() == "btc":
                     tp_factors = [0.982, 0.962, 0.922, 0.902, 0.852, 0.802, 0.702] if is_short else [1.018, 1.038, 1.078, 1.098, 1.148, 1.198, 1.298]
                     stoploss_price = price * 1.10 if is_short else price * 0.90
@@ -98,15 +99,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 tp_prices = [price * f for f in tp_factors]
                 symbol_pair = f"{actual_symbol.replace('USDT', '')}/USDT"
-
                 leverage = "20x"
 
+                # Price formatter
                 format_price = (
                     (lambda p: f"{int(p)}")
                     if coin_id.lower() in ["btc", "eth"]
                     else (format_price_custom if not use_whole_numbers else (lambda p: f"{int(p)}"))
                 )
 
+                # Signal message
                 response_message = (
                     f"Future {'Short' if is_short else 'Long + Spot'}\n\n"
                     f"{symbol_pair}\n\n"
@@ -119,7 +121,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 await context.bot.send_message(chat_id=update.effective_chat.id, text=response_message)
                 await context.bot.send_message(chat_id='-1001541449446', text=response_message)
-
             else:
                 await context.bot.send_message(
                     chat_id=update.effective_chat.id,
@@ -128,10 +129,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.exception("An error occurred in handle_message")
-        await context.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=f"❗ Error in bot:\n{e}"
-        )
+        await context.bot.send_message(chat_id=ADMIN_ID, text=f"❗ Error in bot:\n{e}")
 
 # ✅ Start bot
 app = ApplicationBuilder().token(TOKEN).build()
