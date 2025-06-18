@@ -62,28 +62,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         text = update.message.text.strip().lower()
 
-        # === Cancellation ===
-        cancel_keywords = r'\b(close|closed|closing|stopped out|stop loss|cut loss|hit sl|sl)\b'
-        if re.search(cancel_keywords, text, re.IGNORECASE):
-            coin_matches = re.findall(r'#([a-z0-9\-]+)', update.message.text, re.IGNORECASE)
-            if coin_matches:
-                for coin in coin_matches:
-                    message = f"Cancel {coin.upper()}/USDT"
-                    await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
-                    await context.bot.send_message(chat_id='-1001541449446', text=message)
-            return
+        # === Unified Cancel Logic ===
+        cancel_trigger = re.search(
+            r'\b(is|are)\s+invalidated\b|\binvalid\b|\bcancelled\b|\bnot\s+valid\b|\bexit\b',
+            text,
+            re.IGNORECASE
+        )
+        if cancel_trigger:
+            coins = re.findall(r'#([a-z0-9\-]+)', text, re.IGNORECASE)
+            if coins:
+                coins_upper = sorted({c.upper() for c in coins})
+                message = "Cancel: " + ", ".join(f"{c}/USDT" for c in coins_upper)
+                await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+                await context.bot.send_message(chat_id='-1001541449446', text=message)
+                return
 
         # === Extract Buy/Short commands ===
         long_matches = re.findall(r'#([a-z0-9\-]+)\s+buy_at_cmp|buy_at_cmp\s+#([a-z0-9\-]+)', text)
         short_matches = re.findall(r'#([a-z0-9\-]+)\s+short_at_cmp|short_at_cmp\s+#([a-z0-9\-]+)', text)
 
-        # Normalize matches: (coin, is_short)
         signals = [(m[0] or m[1], False) for m in long_matches] + [(m[0] or m[1], True) for m in short_matches]
 
         for coin_id, is_short in signals:
             price, actual_symbol = get_price(coin_id)
             if price:
-                # === TP/SL logic ===
                 if coin_id.lower() == "btc":
                     tp_factors = [0.982, 0.962, 0.922, 0.902, 0.852, 0.802, 0.702] if is_short else [1.018, 1.038, 1.078, 1.098, 1.148, 1.198, 1.298]
                     stoploss_price = price * 1.10 if is_short else price * 0.90
@@ -101,14 +103,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 symbol_pair = f"{actual_symbol.replace('USDT', '')}/USDT"
                 leverage = "20x"
 
-                # Price formatter
                 format_price = (
                     (lambda p: f"{int(p)}")
                     if coin_id.lower() in ["btc", "eth"]
                     else (format_price_custom if not use_whole_numbers else (lambda p: f"{int(p)}"))
                 )
 
-                # Signal message
                 response_message = (
                     f"Future {'Short' if is_short else 'Long + Spot'}\n\n"
                     f"{symbol_pair}\n\n"
