@@ -83,6 +83,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         signals = [(m[0] or m[1], False) for m in long_matches] + [(m[0] or m[1], True) for m in short_matches]
 
+        # === Re-open support ===
+        text_lower = text.lower()
+        if 'buy_at_cmp' in text_lower and re.search(r're[-\s]?open setup', text, re.IGNORECASE):
+            reopen_hashtags = re.findall(r'#([a-z0-9\-]+)', text, re.IGNORECASE)
+            existing_long = {coin.lower() for coin, is_short in signals if not is_short}
+            for coin in reopen_hashtags:
+                if coin.lower() not in existing_long:
+                    signals.append((coin, False))
+
+        elif 'short_at_cmp' in text_lower and re.search(r're[-\s]?open setup', text, re.IGNORECASE):
+            reopen_hashtags = re.findall(r'#([a-z0-9\-]+)', text, re.IGNORECASE)
+            existing_short = {coin.lower() for coin, is_short in signals if is_short}
+            for coin in reopen_hashtags:
+                if coin.lower() not in existing_short:
+                    signals.append((coin, True))
+
+        # === Process Buy/Short signals ===
         for coin_id, is_short in signals:
             price, actual_symbol = get_price(coin_id)
             if price:
