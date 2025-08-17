@@ -16,95 +16,143 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- Fetch price from Binance Futures ---
-def get_price(symbol: str):
+# Binance Futures price fetcher
+def get_price(symbol):
     try:
-        url = f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={symbol.upper()}USDT"
-        response = requests.get(url, timeout=10)
+        binance_symbol = symbol.upper() + "USDT"
+        url = f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={binance_symbol}"
+        response = requests.get(url)
         data = response.json()
-        if "price" in data:
-            return float(data["price"]), symbol.upper() + "USDT"
-        return None, None
+        if 'price' in data:
+            return float(data['price']), binance_symbol
+
+        alternative_symbol = "1000" + symbol.upper() + "USDT"
+        url = f"https://fapi.binance.com/fapi/v1/ticker/price?symbol={alternative_symbol}"
+        response = requests.get(url)
+        data = response.json()
+        if 'price' in data:
+            return float(data['price']), alternative_symbol
+
     except Exception as e:
         logger.error(f"Error fetching price for {symbol}: {e}")
-        return None, None
+    return None, None
 
-# --- Signal Handler ---
-async def handle_signal(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.strip()
+def format_price_custom(price: float) -> str:
+    price_str = f"{price:.10f}"
+    if '.' in price_str:
+        integer_part, decimal_part = price_str.split('.')
+        sig_digits = ''
+        count = 0
+        for digit in decimal_part:
+            sig_digits += digit
+            if digit != '0':
+                count += 1
+            if count == 5:
+                break
+        return f"{integer_part}.{sig_digits}".rstrip('0').rstrip('.')
+    return price_str
 
+# Main handler
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        # --- Detect Long & Short signals ---
-        # Long: #COIN Buy_at_CMP | Buy_at_CMP #COIN | #COIN Buy_at:<price>
-        long_matches = re.findall(
-            r'#([a-z0-9\-]+)\s*buy_at_cmp'
-            r'|buy_at_cmp\s*#([a-z0-9\-]+)'
-            r'|#([a-z0-9\-]+)\s*buy_at:\s*([\d\.]+)',
-            text, re.IGNORECASE
-        )
+        if not update.message or not update.message.text:
+            return
 
-        # Short: #COIN Short_at_CMP | Short_at_CMP #COIN | #COIN Short_at:<price>
-        short_matches = re.findall(
-            r'#([a-z0-9\-]+)\s*short_at_cmp'
-            r'|short_at_cmp\s*#([a-z0-9\-]+)'
-            r'|#([a-z0-9\-]+)\s*short_at:\s*([\d\.]+)',
-            text, re.IGNORECASE
-        )
+        text = update.message.text.strip().lower()
+        coin_matches = re.findall(r'#([a-z0-9\-]+)', text, re.IGNORECASE)
+        still_holding = set(re.findall(r'still holding\s+#([a-z0-9\-]+)', text, re.IGNORECASE))
+        profit_keywords = re.findall(r'\+\d+%|\bclosed in profit\b|\bbooked\b|\bsecured\b', text)
+        cancel_loss_keywords = r'\bstopped out\b|\bhit sl\b|\bsl\b|\bstop loss\b|\binvalidated\b'
 
-        signals = []
+        # Cancel by coin with loss only
+        if re.search(cancel_loss_keywords, text) and coin_matches:
+            for coin in sorted(set(coin_matches)):
+                if coin.lower() in still_holding:
+                    continue
+                if not re.search(rf'{coin}.*(\+\d+%|\bclosed in profit\b|\bbooked\b|\bsecured\b)', text, re.IGNORECASE):
+                    coin_upper = coin.upper()
+                    message = f"Cancel {coin_upper}/USDT"
+                    await context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+                    await context.bot.send_message(chat_id='-1001541449446', text=message)
 
-        # Process long signals
-        for m in long_matches:
-            coin = m[0] or m[1] or m[2]
-            entry_price = m[3] if len(m) > 3 and m[3] else None
-            signals.append((coin, False, entry_price))  # False = Long
+        # Global short close
+        if "shorts should be closed" in text:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Cancel All Short Trades")
+            await context.bot.send_message(chat_id='-1001541449446', text="Cancel All Short Trades")
+            return
 
-        # Process short signals
-        for m in short_matches:
-            coin = m[0] or m[1] or m[2]
-            entry_price = m[3] if len(m) > 3 and m[3] else None
-            signals.append((coin, True, entry_price))   # True = Short
+        # Reopen and entry signals
+        is_reopen = 're-open' in text
+        long_matches = re.findall(r'#([a-z0-9\-]+)\s+buy_at_cmp|buy_at_cmp\s+#([a-z0-9\-]+)', text)
+        short_matches = re.findall(r'#([a-z0-9\-]+)\s+short_at_cmp|short_at_cmp\s+#([a-z0-9\-]+)', text)
 
-        # --- Send formatted signals ---
-        for coin_id, is_short, entry_price in signals:
-            if entry_price:  # manual entry
-                price = float(entry_price)
-                _, actual_symbol = get_price(coin_id)  # get real Binance symbol
-            else:
-                price, actual_symbol = get_price(coin_id)
+        signals = [(m[0] or m[1], False) for m in long_matches] + [(m[0] or m[1], True) for m in short_matches]
 
-            if not price:
-                await update.message.reply_text(f"⚠️ Could not fetch price for {coin_id}")
+        if is_reopen:
+            reopen_coins = re.findall(r'#([a-z0-9\-]+)', text, re.IGNORECASE)
+            is_short = 'short_at_cmp' in text
+            for coin in reopen_coins:
+                if coin.lower() not in [s[0].lower() for s in signals]:
+                    signals.append((coin, is_short))
+
+        for coin_id, is_short in signals:
+            if coin_id.lower() in still_holding:
                 continue
 
-            side = "Short" if is_short else "Long"
-            mode = "Future" if is_short else "Future Long + Spot"
+            price, actual_symbol = get_price(coin_id)
+            if price:
+                coin_lower = coin_id.lower()
+                if coin_lower in ["btc", "eth", "ltc", "link", "sol"]:
+                    amount_line = "Amount per trade : 2%"
+                else:
+                    amount_line = "Amount per trade : 1%"
 
-            message = (
-                f"{mode}\n\n"
-                f"{actual_symbol}\n\n"
-                f"Entry: {entry_price if entry_price else price}\n\n"
-                f"TP1: ...\n"
-                f"TP2: ...\n"
-                f"TP3: ...\n\n"
-                f"Stoploss: ...\n"
-                f"Leverage : 20x [cross]\n"
-                f"Amount per trade : 1%\n\n"
-                f"@shsAdmin"
-            )
+                if coin_lower == "btc":
+                    tp_factors = [0.982, 0.962, 0.922, 0.902, 0.852, 0.802, 0.702] if is_short else [1.018, 1.038, 1.078, 1.098, 1.148, 1.198, 1.298]
+                    stoploss_price = price * 1.10 if is_short else price * 0.90
+                    use_whole = True
+                elif coin_lower == "eth":
+                    tp_factors = [0.955, 0.905, 0.855, 0.805, 0.755, 0.705, 0.655] if is_short else [1.045, 1.095, 1.145, 1.195, 1.245, 1.295, 1.395]
+                    stoploss_price = price * 1.15 if is_short else price * 0.85
+                    use_whole = True
+                else:
+                    tp_factors = [0.955, 0.905, 0.805, 0.605, 0.405, 0.205, 0.105] if is_short else [1.045, 1.095, 1.195, 1.395, 1.595, 1.795, 1.995]
+                    stoploss_price = price * 1.30 if is_short else price * 0.70
+                    use_whole = False
 
-            await update.message.reply_text(message)
+                tp_prices = [price * f for f in tp_factors]
+                symbol_pair = f"{actual_symbol.replace('USDT', '')}/USDT"
+                leverage = "20x"
+                format_price = (lambda p: f"{int(p)}") if use_whole else format_price_custom
+
+                response_message = (
+                    f"Future {'Short' if is_short else 'Long + Spot'}\n\n"
+                    f"{symbol_pair}\n\n"
+                    f"Entry: {format_price(price)}\n\n" +
+                    "\n".join([f"TP{i+1}: {format_price(tp)}" for i, tp in enumerate(tp_prices)]) + "\n\n" +
+                    f"Stoploss: {format_price(stoploss_price)}\n\n"
+                    f"Leverage : {leverage} [cross]\n"
+                    f"{amount_line}\n\n"
+                    f"@shsAdmin"
+                )
+
+                await context.bot.send_message(chat_id=update.effective_chat.id, text=response_message)
+                await context.bot.send_message(chat_id='-1001541449446', text=response_message)
+            else:
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=f"⚠️ Could not fetch price for '{coin_id}'. Please check Binance Futures symbol."
+                )
 
     except Exception as e:
-        logger.error(f"Error handling signal: {e}")
-        await context.bot.send_message(chat_id=ADMIN_ID, text=f"⚠️ Bot Error:\n{e}")
+        logger.exception("An error occurred in handle_message")
+        await context.bot.send_message(chat_id=ADMIN_ID, text=f"❗ Error in bot:\n{e}")
 
-# --- Main Bot ---
-def main():
-    keep_alive()
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_signal))
+# Run bot
+app = ApplicationBuilder().token(TOKEN).build()
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+keep_alive()
+
+if __name__ == '__main__':
+    print("Bot is running...")
     app.run_polling()
-
-if __name__ == "__main__":
-    main()
