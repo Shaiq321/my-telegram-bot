@@ -102,7 +102,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             price, actual_symbol = get_price(coin_id)
             if price:
                 coin_lower = coin_id.lower()
-                if coin_lower in ["btc", "eth", "ltc", "sol"]:
+                if coin_lower in ["btc", "eth", "ltc", "link", "sol"]:
                     amount_line = "Amount per trade : 2%"
                 else:
                     amount_line = "Amount per trade : 1%"
