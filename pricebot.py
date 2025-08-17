@@ -81,25 +81,56 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(chat_id='-1001541449446', text="Cancel All Short Trades")
             return
 
+        # --- Detect Long & Short signals ---
+        # Long: #COIN buy_at_cmp | buy_at_cmp #COIN | #COIN Buy_at:<price>
+        long_matches = re.findall(
+            r'#([a-z0-9\-]+)\s+buy_at_cmp'
+            r'|buy_at_cmp\s+#([a-z0-9\-]+)'
+            r'|#([a-z0-9\-]+)\s+buy_at:\s*([\d\.]+)',
+            text, re.IGNORECASE
+        )
+
+        # Short: #COIN short_at_cmp | short_at_cmp #COIN | #COIN Short_at:<price>
+        short_matches = re.findall(
+            r'#([a-z0-9\-]+)\s+short_at_cmp'
+            r'|short_at_cmp\s+#([a-z0-9\-]+)'
+            r'|#([a-z0-9\-]+)\s+short_at:\s*([\d\.]+)',
+            text, re.IGNORECASE
+        )
+
+        signals = []
+
+        # Process long signals
+        for m in long_matches:
+            coin = m[0] or m[1] or m[2]
+            entry_price = m[3] if len(m) > 3 and m[3] else None
+            signals.append((coin, False, entry_price))  # False = Long
+
+        # Process short signals
+        for m in short_matches:
+            coin = m[0] or m[1] or m[2]
+            entry_price = m[3] if len(m) > 3 and m[3] else None
+            signals.append((coin, True, entry_price))   # True = Short
+
         # Reopen and entry signals
         is_reopen = 're-open' in text
-        long_matches = re.findall(r'#([a-z0-9\-]+)\s+buy_at_cmp|buy_at_cmp\s+#([a-z0-9\-]+)', text)
-        short_matches = re.findall(r'#([a-z0-9\-]+)\s+short_at_cmp|short_at_cmp\s+#([a-z0-9\-]+)', text)
-
-        signals = [(m[0] or m[1], False) for m in long_matches] + [(m[0] or m[1], True) for m in short_matches]
-
         if is_reopen:
             reopen_coins = re.findall(r'#([a-z0-9\-]+)', text, re.IGNORECASE)
             is_short = 'short_at_cmp' in text
             for coin in reopen_coins:
                 if coin.lower() not in [s[0].lower() for s in signals]:
-                    signals.append((coin, is_short))
+                    signals.append((coin, is_short, None))
 
-        for coin_id, is_short in signals:
+        for coin_id, is_short, entry_price in signals:
             if coin_id.lower() in still_holding:
                 continue
 
-            price, actual_symbol = get_price(coin_id)
+            if entry_price:  # manual Buy_at: or Short_at:
+                price = float(entry_price)
+                _, actual_symbol = get_price(coin_id)  # fetch only symbol name
+            else:
+                price, actual_symbol = get_price(coin_id)
+
             if price:
                 coin_lower = coin_id.lower()
                 if coin_lower in ["btc", "eth", "ltc", "link", "sol"]:
