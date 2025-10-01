@@ -62,7 +62,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         coin_matches = re.findall(r'#([a-z0-9\-]+)', text, re.IGNORECASE)
         still_holding = set(re.findall(r'still holding\s+#([a-z0-9\-]+)', text, re.IGNORECASE))
         profit_keywords = re.findall(r'\+\d+%|\bclosed in profit\b|\bbooked\b|\bsecured\b', text)
-        cancel_loss_keywords = r'\bstopped out\b|\bhit sl\b|\bsl\b|\bstop loss\b|\binvalidated\b'
+        cancel_loss_keywords = r'\bstopped out\b|\bhit sl\b|\bsl\b|\bstop loss\b|\binvalidated\b|\bclose\b'
 
         # Cancel by coin with loss only
         if re.search(cancel_loss_keywords, text) and coin_matches:
